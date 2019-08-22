@@ -35,8 +35,8 @@ namespace MaterialEvaluationCal.Base
             switch (eSqlConnType)
             {
                 case ESqlConnType.ConnectionStringMain:
-                    sqlConnectionString = ConfigurationManager.ConnectionStrings["ConnectionStringMain"].ConnectionString;    //汽配摘要数据数据库连接
-                    sqlConnectionStringWrite = ConfigurationManager.ConnectionStrings["ConnectionStringMain"].ConnectionString;  //汽配摘要数据数据库连接
+                    sqlConnectionString = ConfigurationManager.ConnectionStrings["ConnectionStringMain"].ConnectionString;    //数据数据库连接
+                    sqlConnectionStringWrite = ConfigurationManager.ConnectionStrings["ConnectionStringMain"].ConnectionString;  //数据数据库连接
                     break;
             }
         }

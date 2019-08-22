@@ -25,9 +25,11 @@ namespace MaterialEvaluationCal
             InitializeComponent();
         }
 
-        private void Button_Click(object sender, RoutedEventArgs e)
+        private void Button_Click_1(object sender, RoutedEventArgs e)
         {
-
+            string work = "碳素结构钢";
+            string tablename = "GBT_700-2006";
+            MaterialEvaluationCal.Calculates.JGJ18_2012.GetExtraDataJson(work, tablename);
         }
     }
 }

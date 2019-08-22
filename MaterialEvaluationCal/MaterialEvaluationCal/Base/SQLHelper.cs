@@ -42,7 +42,7 @@ namespace DBUtility
         /// <summary>
         /// SqlConnetSring 
         /// </summary>
-        public static readonly string SqlConnectionString = ConfigurationManager.ConnectionStrings["ConnectionString"].ConnectionString;
+        public static readonly string SqlConnectionString = ConfigurationManager.ConnectionStrings["ConnectionStringMain"].ConnectionString;
 
         #region private utility methods & constructors
 
