@@ -55,6 +55,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Calculates\DemoCode.cs" />
     <Compile Include="page\Jiegougang.xaml.cs">
       <DependentUpon>Jiegougang.xaml</DependentUpon>
     </Compile>
@@ -67,8 +68,8 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Calculates\GGHJ\JGJ18-2012.cs" />
-    <Compile Include="Common\BaseData.cs" />
-    <Compile Include="Common\Methods.cs" />
+    <Compile Include="Calculates\Common\BaseData.cs" />
+    <Compile Include="Calculates\Common\BaseMethods.cs" />
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>

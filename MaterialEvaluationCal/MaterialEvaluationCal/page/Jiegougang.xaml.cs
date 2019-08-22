@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MaterialEvaluationCal.Calculates;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -19,6 +20,9 @@ namespace MaterialEvaluationCal
     /// </summary>
     public partial class Jiegougang : Window
     {
+        IDictionary<string, IList<IDictionary<string, string>>> dataExtra = null;
+        IDictionary<string, IDictionary<string, IList<IDictionary<string, string>>>> retData = null;
+
         public Jiegougang()
         {
 
@@ -27,7 +31,9 @@ namespace MaterialEvaluationCal
 
         private void Btn_ckbg_Click(object sender, RoutedEventArgs e)
         {
-            
+            string err;
+
+            //Calculate(dataExtra, ref retData, out err);
         }
     }
 }
