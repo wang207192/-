@@ -33,11 +33,13 @@ namespace MaterialEvaluationCal
             string err = "";
             //Calculates.JGJ18_2012.GetExtraDataJson(work, tablename);
 
-            string sqlStr = "Select top 10 * from  S_JGG ";
+            string sqlStr = "Select top 10 GCLX_PH,SCL1,SCL2,SCL3 from  S_JGG ";
             string JsonhelperData = GetDataJson(type, sqlStr, tablename);
 
 
             string extraDatajson = Calculates.JGJ18_2012.GetExtraDataJson("碳素结构钢", "GBT_700-2006");
+            //string extraDatajson   JsonhelperData = GetDataJson(type, sqlStr, tablename);
+
             var listExtraData = Calculates.JGJ18_2012.GetDictionary(extraDatajson, "碳素结构钢");
             var retData1 = Calculates.JGJ18_2012.GetDictionary(JsonhelperData, type);
 
