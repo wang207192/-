@@ -25,7 +25,7 @@ namespace MaterialEvaluationCal.Base
         Read, ReadAndWrite
     }
 
-    public abstract class BaseDal
+    public class BaseDal
     {
         private string sqlConnectionString; //当前读数据库链接字符串
         private string sqlConnectionStringWrite; //当前写数据库链接字符串
