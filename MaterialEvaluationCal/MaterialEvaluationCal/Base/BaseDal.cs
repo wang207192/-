@@ -14,7 +14,8 @@ namespace MaterialEvaluationCal.Base
     /// </summary>
     public enum ESqlConnType
     {
-        ConnectionStringMain
+        ConnectionStringMain,
+        ConnectionStringJCJT
     }
 
     /// <summary>
@@ -37,6 +38,10 @@ namespace MaterialEvaluationCal.Base
                 case ESqlConnType.ConnectionStringMain:
                     sqlConnectionString = ConfigurationManager.ConnectionStrings["ConnectionStringMain"].ConnectionString;    //数据数据库连接
                     sqlConnectionStringWrite = ConfigurationManager.ConnectionStrings["ConnectionStringMain"].ConnectionString;  //数据数据库连接
+                    break;
+                case ESqlConnType.ConnectionStringJCJT:
+                    sqlConnectionString = ConfigurationManager.ConnectionStrings["ConnectionStringJCJT"].ConnectionString;    //数据数据库连接
+                    sqlConnectionStringWrite = ConfigurationManager.ConnectionStrings["ConnectionStringJCJT"].ConnectionString;  //数据数据库连接
                     break;
             }
         }

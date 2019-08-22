@@ -18,6 +18,11 @@ namespace MaterialEvaluationCal.Base
 
         }
 
+        public SqlBase(string type) : base(ESqlConnType.ConnectionStringJCJT)
+        {
+
+        }
+
         public SqlBase(ESqlConnType eSqlConnType)
             : base(eSqlConnType)
         {
