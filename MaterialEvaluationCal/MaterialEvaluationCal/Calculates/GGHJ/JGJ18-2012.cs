@@ -129,18 +129,21 @@ namespace MaterialEvaluationCal.Calculates
                 return false;
             var fieldData = tableData.Where(u => u.Values.Contains(rowDate["GCLX_PH"].ToString()));
             //检验项目
-            if(!string.IsNullOrEmpty(rowDate["JCXM"]))
+            if (!string.IsNullOrEmpty(rowDate["JCXM"]))
             {
                 var inspectionItems = rowDate["JCXM"].Split(',');
-                foreach(var item in inspectionItems)
+                foreach (var item in inspectionItems)
                 {
-                    switch(item)
+                    switch (item)
                     {
                         case "拉伸":
                             CheckItem(fieldData, rowDate, "SCL", "SCLBZZ", true);//伸长率+厚度
                             break;
                         case "冷弯":
                             CheckItem(fieldData, rowDate, "SCL", "LWBZZ", true);//弯心直径+厚度
+                            break;
+                        case "屈服强度":
+                            CheckYield_Strength(fieldData, rowDate);  //屈服强度
                             break;
                         default:
                             break;
@@ -155,10 +158,10 @@ namespace MaterialEvaluationCal.Calculates
 
 
             //筛选等级
-            if (!string.IsNullOrEmpty(rowDate["Grade"]) && rowDate["Grade"].Trim() != "-")
-            {
-                fieldData = fieldData.Where(u => u.Values.Contains(rowDate["Grade"]));
-            }
+            //if (!string.IsNullOrEmpty(rowDate["Grade"]) && rowDate["Grade"].Trim() != "-")
+            //{
+            //    fieldData = fieldData.Where(u => u.Values.Contains(rowDate["Grade"]));
+            //}
 
 
             //检验屈服强度1,2,3
@@ -191,8 +194,8 @@ namespace MaterialEvaluationCal.Calculates
         /// <param name="hasLand">是否涉及长度计算</param>
         private static void CheckItem(IEnumerable<IDictionary<string, string>> tableData,IDictionary<string,string> rowDate,string checkItemstr,string tableItemStr,bool hasLand = false)
         {
-            if (string.IsNullOrEmpty(checkItemstr) || string.IsNullOrEmpty(tableItemStr))
-                return;
+            // checkItemstr   QFQD
+            // tableItemStr   QFQDBZZ
             //厚度、直径，伸长率 SCL1
             /*CD	长度(MM)  /  ZJ	直径  取值不确定*/
             //获取需检验数据中指定元素的值
@@ -236,7 +239,42 @@ namespace MaterialEvaluationCal.Calculates
             }
         }
 
-
+        private static void CheckYield_Strength(IEnumerable<IDictionary<string, string>> tableData, IDictionary<string, string> rowDate)
+        {
+            //厚度、直径，伸长率 SCL1
+            /*CD	长度(MM)  /  ZJ	直径  取值不确定*/
+            //获取需检验数据中指定元素的值
+            bool checkOK = false;
+            // 屈服强度验证 如QFQD1,QFQD2,QFQD3
+            int baseNum = 1;
+            var checkItems = rowDate.Where(u => u.Key.StartsWith("QFQD")).ToArray();
+            foreach (var val in checkItems)
+            {
+                var item = tableData.Where(u => u.Keys.ToString() == "QFQDBZZ" && (u.Values == null || GetInt(u.Values.ToString()) <= GetInt(val.Value.ToString())));
+                //指定长度验证
+                if (tableData.Any(u => (u.Keys.ToString() == "ZJM" && u.Values.ToString() == rowDate["ZJ"])))
+                {
+                    item = tableData.Where(u => (u.Keys.ToString() == "ZJM" && u.Values.ToString() == rowDate["ZJ"]));
+                }
+                if (item.Any())
+                {
+                    checkOK = true;
+                }
+                //更新指定的数据，如：伸长率1是否合格等
+                if (string.IsNullOrEmpty(rowDate["HG_QF"]))
+                    rowDate["HG_QF"] = "0";
+                if (checkOK)
+                {
+                    rowDate["HG_QF" + baseNum] = "1";
+                    rowDate["HG_QF"] = (GetInt(rowDate["HG_QF"]) + 1).ToString();
+                }
+                else
+                {
+                    rowDate["HG_QF" + baseNum] = "0";
+                }
+                baseNum++;
+            }
+        }
 
         public static string GetExtraDataJson(string work, string tablename)
         {
