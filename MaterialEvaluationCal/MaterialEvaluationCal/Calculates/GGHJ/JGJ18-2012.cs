@@ -23,7 +23,6 @@ namespace MaterialEvaluationCal.Calculates
                     foreach(var dicFields in tableItems.Value)
                     {
                         Check_JGG(dataExtra, dicFields, ref retData,ref err);
-
                     }
                 }
 
@@ -101,17 +100,6 @@ namespace MaterialEvaluationCal.Calculates
             //冷弯合格个数
             basedate.Add("HG_LW", "");
             #endregion
-            //单个数据组装
-            //var basedateList = retData.Values;
-            //if (basedateList == null)
-            //    basedateList = new ;
-            //for (int i = 0;i<10;i++)
-            //{
-
-
-            //    basedateList.Add(basedate);
-            //}
-            //return retData.Add("1",basedateList);
         }
 
         /// <summary>
@@ -122,25 +110,24 @@ namespace MaterialEvaluationCal.Calculates
         /// <returns></returns>
         public static bool Check_JGG(IDictionary<string, IList<IDictionary<string, string>>> dataExtra, IDictionary<string, string> rowDate,ref IDictionary<string, IDictionary<string, IList<IDictionary<string, string>>>> retData, ref string err)
         {
-            //{1,["Brand_No","Q195"|"Grade","-"|"Land_Diam_Min","0"|"Land_Diam_Max","16"|"Grade","-"|"Width","NULL"|"Yield_Strength","195"|"Tensile_Strength","315-430"]}
-            //{"GBT_700-2006",[{"id":"1"},{"no":"195"}],[{"id":"1"},{"no":"195"}]}
             //筛选牌号
-            var Brand_No = rowDate["Brand_No"];
-            if (string.IsNullOrEmpty(rowDate["Brand_No"]))
+            if (string.IsNullOrEmpty(rowDate["GCLX_PH"]))
             {
                 throw new Exception("钢材牌号不存在");
             }
-            //var fileDate = GetExtraDataList("GBT_700-2006.GCLX_PH", Brand_No);
-            if (!dataExtra.ContainsKey("GBT_700-2006"))
+            if (!dataExtra.ContainsKey("BZ_JGG_DJ"))
             {
-                throw new Exception("GBT_700-2006 表数据不存在");
+                throw new Exception("BZ_JGG_DJ 表数据不存在");
             }
-            var tableData = dataExtra["GBT_700-2006"];
-            if (!tableData.Any(u => u.ContainsKey("GCLX_PH")))
+            var tableData = dataExtra["BZ_JGG_DJ"];
+            if (!tableData.Any(u => u.ContainsKey("PH")))
             {
-                throw new Exception("表不存在 'GCLX_PH' 字段");
+                err = "【BZ_JGG_DJ】表不存在【PH】字段";
+                return false;
             }
-            var fieldData = tableData.Where(u => u.ContainsKey("GCLX_PH"));
+            if (!tableData.Where(u => u.Values.Contains(rowDate["GCLX_PH"].ToString())).Any())
+                return false;
+            var fieldData = tableData.Where(u => u.Values.Contains(rowDate["GCLX_PH"].ToString()));
             //检验项目
             if(!string.IsNullOrEmpty(rowDate["JCXM"]))
             {
@@ -150,10 +137,10 @@ namespace MaterialEvaluationCal.Calculates
                     switch(item)
                     {
                         case "拉伸":
-                            CheckItem(ref tableData, rowDate, "SCL", "Elongation_After",true);//伸长率+厚度
+                            CheckItem(fieldData, rowDate, "SCL", "SCLBZZ", true);//伸长率+厚度
                             break;
                         case "冷弯":
-                            CheckItem(ref tableData, rowDate, "SCL", "Elongation_After", true);//弯心直径+厚度
+                            CheckItem(fieldData, rowDate, "SCL", "LWBZZ", true);//弯心直径+厚度
                             break;
                         default:
                             break;
@@ -195,74 +182,61 @@ namespace MaterialEvaluationCal.Calculates
             return true;
         }
         /// <summary>
-        /// 拉伸检测
+        /// 指定条目检测
         /// </summary>
-        /// <param name="tableData"></param>
-        /// <param name="rowDate"></param>
-        private static void CheckItem(ref IList<IDictionary<string, string>> tableData,IDictionary<string,string> rowDate,string checkItemstr,string tableItemStr,bool hasLand = false)
+        /// <param name="tableData">指定比对标准数据</param>
+        /// <param name="rowDate">需要验证的条目</param>
+        /// <param name="checkItemstr">验证项目类别</param>
+        /// <param name="tableItemStr">标准数据中项目类别字段名称</param>
+        /// <param name="hasLand">是否涉及长度计算</param>
+        private static void CheckItem(IEnumerable<IDictionary<string, string>> tableData,IDictionary<string,string> rowDate,string checkItemstr,string tableItemStr,bool hasLand = false)
         {
             if (string.IsNullOrEmpty(checkItemstr) || string.IsNullOrEmpty(tableItemStr))
                 return;
             //厚度、直径，伸长率 SCL1
             /*CD	长度(MM)  /  ZJ	直径  取值不确定*/
             //获取需检验数据中指定元素的值
-            string Land_Diam = "";
-            int minNum = 0;
-            int maxNum = 0;
-            Land_Diam = rowDate["ZJ"];
-            if (hasLand && !string.IsNullOrWhiteSpace(Land_Diam))
-            {
-                var s = Land_Diam.Split('>', '≤');
-                if (Land_Diam.Contains(">"))
-                {
-                    if (Land_Diam.Contains("≤"))
-                    {
-                        maxNum = GetInt(s[1]);
-                    } 
-                    else
-                        minNum = GetInt(s[0]);
-                }
-                else
-                    maxNum = GetInt(s[0]);
-            }
 
             bool checkOK = false;
             //伸长率验证 如SCL1,SCL2,SCL3
             int baseNum = 1;
-            foreach (var val in rowDate.Where(u => u.Key.StartsWith(checkItemstr)))
+            var checkItems = rowDate.Where(u => u.Key.StartsWith(checkItemstr)).ToArray();
+            foreach (var val in checkItems)
             {
                 var item = tableData.Where(u => u.Keys.ToString() == tableItemStr && (u.Values == null || GetInt(u.Values.ToString()) <= GetInt(val.Value.ToString())));
                 //指定长度验证
-                if (hasLand && tableData.Any(u => (u.Keys.ToString() == "Land_Diam_Min" && GetInt(u.Values.ToString()) > minNum) && (u.Keys.ToString() == "Land_Diam_Max" && GetInt(u.Values.ToString()) <= maxNum)))
+                if (hasLand && tableData.Any(u => (u.Keys.ToString() == "ZJM" && u.Values.ToString() == rowDate["ZJ"])))
                 {
-                    item = tableData.Where(u => (u.Keys.ToString() == "Land_Diam_Min" && GetInt(u.Values.ToString()) > minNum) && (u.Keys.ToString() == "Land_Diam_Max" && GetInt(u.Values.ToString()) <= maxNum));
+                    item = tableData.Where(u => (u.Keys.ToString() == "ZJM" && u.Values.ToString() == rowDate["ZJ"]));
                 }
                 if (item.Any())
                 {
                     checkOK = true;
                 }
+                //更新指定的数据，如：伸长率1是否合格等
                 switch (checkItemstr)
                 {
                     case "SCL":
-                        rowDate["HG_SC" + baseNum] = checkOK ? "1" : "0";
+                        if(string.IsNullOrEmpty(rowDate["HG_SC"]))
+                            rowDate["HG_SC"] = "0" ;
+                        if (checkOK)
+                        {
+                            rowDate["HG_SC" + baseNum] = "1";
+                            rowDate["HG_SC"] = (GetInt(rowDate["HG_SC"])+1).ToString();
+                        }
+                        else
+                        {
+                            rowDate["HG_SC" + baseNum] = "0";
+                        }
                         break;
                     case "":
                         break;
                 }
                 baseNum++;
             }
-
-
         }
-        /// <summary>
-        /// 冷弯检测
-        /// </summary>
-        /// <param name="tableData"></param>
-        /// <param name="rowDate"></param>
-        private void CheckBending(ref IList<IDictionary<string, string>> tableData, IDictionary<string, string> rowDate)
-        {
 
-        }
+
 
         public static string GetExtraDataJson(string work, string tablename)
         {
