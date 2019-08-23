@@ -31,6 +31,7 @@ namespace MaterialEvaluationCal.Calculates
         }
 
 
+        #region
         public static void GetdataExtra(ref IDictionary<string, IDictionary<string, IList<IDictionary<string, string>>>> retData)
         {
             #region 数据组装
@@ -129,21 +130,18 @@ namespace MaterialEvaluationCal.Calculates
                 return false;
             var fieldData = tableData.Where(u => u.Values.Contains(rowDate["GCLX_PH"].ToString()));
             //检验项目
-            if (!string.IsNullOrEmpty(rowDate["JCXM"]))
+            if(!string.IsNullOrEmpty(rowDate["JCXM"]))
             {
                 var inspectionItems = rowDate["JCXM"].Split(',');
-                foreach (var item in inspectionItems)
+                foreach(var item in inspectionItems)
                 {
-                    switch (item)
+                    switch(item)
                     {
                         case "拉伸":
-                            CheckItem(fieldData, rowDate, "SCL", "SCLBZZ", true);//伸长率+厚度
+                            DrawCheck(fieldData, rowDate);//伸长率+厚度
                             break;
                         case "冷弯":
-                            CheckItem(fieldData, rowDate, "SCL", "LWBZZ", true);//弯心直径+厚度
-                            break;
-                        case "屈服强度":
-                            CheckYield_Strength(fieldData, rowDate);  //屈服强度
+                            BendingCheck(fieldData, rowDate);//弯心直径+厚度
                             break;
                         default:
                             break;
@@ -165,116 +163,135 @@ namespace MaterialEvaluationCal.Calculates
 
 
             //检验屈服强度1,2,3
-            var Land_DiamItems = rowDate.Where(u => u.Key.Contains("QFQD"));
-            if (Land_DiamItems.Any())
-            {
-                foreach (KeyValuePair<string, string> item in Land_DiamItems)
-                {
-                    //QFQD1,195
-                    if (item.Value.Any() && fieldData.Any(u => u.Keys.ToString() == "Yield_Strength" && u.Values.ToString() == item.Value.ToString()))
-                    {
-                        //获取最小值
-
-                    }
-                }
-            }
-            //检验抗拉强度
+            //检验抗拉强度1,2,3
             //检验断后伸长率
 
 
             return true;
         }
+        #endregion
+
+
+        #region 拉伸检测
         /// <summary>
-        /// 指定条目检测
+        /// 拉伸检测
         /// </summary>
-        /// <param name="tableData">指定比对标准数据</param>
-        /// <param name="rowDate">需要验证的条目</param>
-        /// <param name="checkItemstr">验证项目类别</param>
-        /// <param name="tableItemStr">标准数据中项目类别字段名称</param>
-        /// <param name="hasLand">是否涉及长度计算</param>
-        private static void CheckItem(IEnumerable<IDictionary<string, string>> tableData,IDictionary<string,string> rowDate,string checkItemstr,string tableItemStr,bool hasLand = false)
+        /// <param name="tableData"></param>
+        /// <param name="rowDate"></param>
+        public static void DrawCheck(IEnumerable<IDictionary<string, string>> tableData, IDictionary<string, string> rowDate)
         {
-            // checkItemstr   QFQD
-            // tableItemStr   QFQDBZZ
             //厚度、直径，伸长率 SCL1
-            /*CD	长度(MM)  /  ZJ	直径  取值不确定*/
-            //获取需检验数据中指定元素的值
+            /*
+             * 1.CD	长度(MM)  /  ZJ	直径  取值不确定暂定ZJ
+             * 2.伸长率为“—”时是否需要判断
+             */
 
             bool checkOK = false;
             //伸长率验证 如SCL1,SCL2,SCL3
             int baseNum = 1;
-            var checkItems = rowDate.Where(u => u.Key.StartsWith(checkItemstr)).ToArray();
+            var checkItems = rowDate.Where(u => u.Key.StartsWith("SCL")).ToArray();
             foreach (var val in checkItems)
             {
-                var item = tableData.Where(u => u.Keys.ToString() == tableItemStr && (u.Values == null || GetInt(u.Values.ToString()) <= GetInt(val.Value.ToString())));
-                //指定长度验证
-                if (hasLand && tableData.Any(u => (u.Keys.ToString() == "ZJM" && u.Values.ToString() == rowDate["ZJ"])))
-                {
-                    item = tableData.Where(u => (u.Keys.ToString() == "ZJM" && u.Values.ToString() == rowDate["ZJ"]));
-                }
+                var item = tableData.Where(u => u.Keys.ToString() == "SCLBZZ" && (u.Values == null || GetInt(u.Values.ToString()) <= GetInt(val.Value.ToString())));
+                //指定长度验证 
+                //Q195 的仅≤40的需要验证
+                if (!rowDate.Any(u => (u.Key == "GCLX_PH" && u.Value.Contains("Q195") && (u.Key == "ZJ" && u.Value == "≤40"))))
+                    CheckDiam(ref tableData, rowDate, "ZJM", "ZJ");
                 if (item.Any())
                 {
                     checkOK = true;
                 }
                 //更新指定的数据，如：伸长率1是否合格等
-                switch (checkItemstr)
-                {
-                    case "SCL":
-                        if(string.IsNullOrEmpty(rowDate["HG_SC"]))
-                            rowDate["HG_SC"] = "0" ;
-                        if (checkOK)
-                        {
-                            rowDate["HG_SC" + baseNum] = "1";
-                            rowDate["HG_SC"] = (GetInt(rowDate["HG_SC"])+1).ToString();
-                        }
-                        else
-                        {
-                            rowDate["HG_SC" + baseNum] = "0";
-                        }
-                        break;
-                    case "":
-                        break;
-                }
-                baseNum++;
-            }
-        }
-
-        private static void CheckYield_Strength(IEnumerable<IDictionary<string, string>> tableData, IDictionary<string, string> rowDate)
-        {
-            //厚度、直径，伸长率 SCL1
-            /*CD	长度(MM)  /  ZJ	直径  取值不确定*/
-            //获取需检验数据中指定元素的值
-            bool checkOK = false;
-            // 屈服强度验证 如QFQD1,QFQD2,QFQD3
-            int baseNum = 1;
-            var checkItems = rowDate.Where(u => u.Key.StartsWith("QFQD")).ToArray();
-            foreach (var val in checkItems)
-            {
-                var item = tableData.Where(u => u.Keys.ToString() == "QFQDBZZ" && (u.Values == null || GetInt(u.Values.ToString()) <= GetInt(val.Value.ToString())));
-                //指定长度验证
-                if (tableData.Any(u => (u.Keys.ToString() == "ZJM" && u.Values.ToString() == rowDate["ZJ"])))
-                {
-                    item = tableData.Where(u => (u.Keys.ToString() == "ZJM" && u.Values.ToString() == rowDate["ZJ"]));
-                }
-                if (item.Any())
-                {
-                    checkOK = true;
-                }
-                //更新指定的数据，如：伸长率1是否合格等
-                if (string.IsNullOrEmpty(rowDate["HG_QF"]))
-                    rowDate["HG_QF"] = "0";
+                if (string.IsNullOrEmpty(rowDate["HG_SC"]))
+                    rowDate["HG_SC"] = "0";
                 if (checkOK)
                 {
-                    rowDate["HG_QF" + baseNum] = "1";
-                    rowDate["HG_QF"] = (GetInt(rowDate["HG_QF"]) + 1).ToString();
+                    rowDate["HG_SC" + baseNum] = "1";
+                    rowDate["HG_SC"] = (GetInt(rowDate["HG_SC"]) + 1).ToString();
                 }
                 else
                 {
-                    rowDate["HG_QF" + baseNum] = "0";
+                    rowDate["HG_SC" + baseNum] = "0";
                 }
+
                 baseNum++;
             }
         }
+        #endregion
+
+        #region 冷弯检测
+        /// <summary>
+        /// 冷弯检测
+        /// </summary>
+        /// <param name="tableData"></param>
+        /// <param name="rowDate"></param>
+        public static void BendingCheck(IEnumerable<IDictionary<string, string>> tableData, IDictionary<string, string> rowDate)
+        {
+            //CheckItem(fieldData, rowDate, "SCL", "LWBZZ", true);//弯心直径+厚度
+            /*
+             * LWZJ	弯心直径
+                XGM	XGM
+                LWJD	冷弯角度
+                FFWQCS	反复弯曲次数
+                WHICH	报表模板编号
+                XLGS	拉根数
+                XWGS	弯根数
+                -判定标准待确定
+             */
+            return;
+            bool checkOK = false;
+            //冷弯验证 如LW1,LW2,LW3
+            int baseNum = 1;
+            var checkItems = rowDate.Where(u => u.Key.StartsWith("LW")).ToArray();
+            foreach (var val in checkItems)
+            {
+                var item = tableData.Where(u => u.Keys.ToString() == "SCLBZZ" && (u.Values == null || GetInt(u.Values.ToString()) <= GetInt(val.Value.ToString())));
+                //指定长度验证 
+                //Q195 的仅≤40的需要验证
+                if (!rowDate.Any(u => (u.Key == "GCLX_PH" && u.Value.Contains("Q195") && (u.Key == "ZJ" && u.Value == "≤40"))))
+                    CheckDiam(ref tableData, rowDate, "ZJM", "ZJ");
+                if (item.Any())
+                {
+                    checkOK = true;
+                }
+                //更新指定的数据，如：伸长率1是否合格等
+                if (string.IsNullOrEmpty(rowDate["HG_SC"]))
+                    rowDate["HG_SC"] = "0";
+                if (checkOK)
+                {
+                    rowDate["HG_SC" + baseNum] = "1";
+                    rowDate["HG_SC"] = (GetInt(rowDate["HG_SC"]) + 1).ToString();
+                }
+                else
+                {
+                    rowDate["HG_SC" + baseNum] = "0";
+                }
+
+                baseNum++;
+            }
+        }
+        #endregion
+
+        #region 验证指定长度的标准数据是否存在
+        /// <summary>
+        /// 验证指定长度的标准数据是否存在
+        /// </summary>
+        /// <param name="tableData">筛选标准表数据</param>
+        /// <param name="rowDate">验证行数据</param>
+        /// <param name="keyStr">标准表对应字段名</param>
+        /// <param name="ValStr">验证行对应字段名</param>
+        private static void CheckDiam(ref IEnumerable<IDictionary<string, string>> tableData, IDictionary<string, string> rowDate, string keyStr, string ValStr)
+        {
+            if (!rowDate.ContainsKey(ValStr))
+                return;
+            if (tableData.Any(u => (u.Keys.ToString() == keyStr && u.Values.ToString() == rowDate[ValStr])))
+            {
+                tableData = tableData.Where(u => (u.Keys.ToString() == keyStr && u.Values.ToString() == rowDate[ValStr]));
+            }
+            return;
+        }
+        #endregion
+
 
         public static string GetExtraDataJson(string work, string tablename)
         {
