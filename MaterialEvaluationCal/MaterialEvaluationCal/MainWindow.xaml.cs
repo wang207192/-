@@ -33,7 +33,7 @@ namespace MaterialEvaluationCal
             string err = "";
             //Calculates.JGJ18_2012.GetExtraDataJson(work, tablename);
 
-            string sqlStr = "Select top 10 GCLX_PH,SCL1,SCL2,SCL3 from  S_JGG ";
+            string sqlStr = "Select top 10 * from  S_JGG ";//GCLX_PH,SCL1,SCL2,SCL3
             string JsonhelperData = GetDataJson(type, sqlStr, tablename);
 
 

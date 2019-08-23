@@ -12,14 +12,19 @@ namespace MaterialEvaluationCal.Calculates
 
         public static bool Calc(IDictionary<string, IList<IDictionary<string, string>>> dataExtra, ref IDictionary<string, IDictionary<string, IList<IDictionary<string, string>>>> retData, ref string err)
         {
-            
+
             /************************ 代码开始 *********************/
+            
             //单行数据进行验证
-            foreach(var items in retData)
+            foreach (var projectItems in retData)
             {
-                foreach (var item in items.Value)
+                foreach (var tableItems in projectItems.Value)
                 {
-                    var dat = item.Value.ToDictionary(u=>u.Values);
+                    foreach(var dicFields in tableItems.Value)
+                    {
+                        Check_JGG(dataExtra, dicFields, ref retData,ref err);
+
+                    }
                 }
 
             }
@@ -115,7 +120,7 @@ namespace MaterialEvaluationCal.Calculates
         /// <param name="dataExtra">标准数据</param>
         /// <param name="rowDate">待检验数据</param>
         /// <returns></returns>
-        public bool Check_JGG(IDictionary<string, IList<IDictionary<string, string>>> dataExtra, IDictionary<string, string> rowDate)
+        public static bool Check_JGG(IDictionary<string, IList<IDictionary<string, string>>> dataExtra, IDictionary<string, string> rowDate,ref IDictionary<string, IDictionary<string, IList<IDictionary<string, string>>>> retData, ref string err)
         {
             //{1,["Brand_No","Q195"|"Grade","-"|"Land_Diam_Min","0"|"Land_Diam_Max","16"|"Grade","-"|"Width","NULL"|"Yield_Strength","195"|"Tensile_Strength","315-430"]}
             //{"GBT_700-2006",[{"id":"1"},{"no":"195"}],[{"id":"1"},{"no":"195"}]}
@@ -148,7 +153,7 @@ namespace MaterialEvaluationCal.Calculates
                             CheckItem(ref tableData, rowDate, "SCL", "Elongation_After",true);//伸长率+厚度
                             break;
                         case "冷弯":
-                            CheckBending(ref tableData, rowDate);
+                            CheckItem(ref tableData, rowDate, "SCL", "Elongation_After", true);//弯心直径+厚度
                             break;
                         default:
                             break;
@@ -194,7 +199,7 @@ namespace MaterialEvaluationCal.Calculates
         /// </summary>
         /// <param name="tableData"></param>
         /// <param name="rowDate"></param>
-        private void CheckItem(ref IList<IDictionary<string, string>> tableData,IDictionary<string,string> rowDate,string checkItemstr,string tableItemStr,bool hasLand = false)
+        private static void CheckItem(ref IList<IDictionary<string, string>> tableData,IDictionary<string,string> rowDate,string checkItemstr,string tableItemStr,bool hasLand = false)
         {
             if (string.IsNullOrEmpty(checkItemstr) || string.IsNullOrEmpty(tableItemStr))
                 return;
@@ -223,6 +228,7 @@ namespace MaterialEvaluationCal.Calculates
 
             bool checkOK = false;
             //伸长率验证 如SCL1,SCL2,SCL3
+            int baseNum = 1;
             foreach (var val in rowDate.Where(u => u.Key.StartsWith(checkItemstr)))
             {
                 var item = tableData.Where(u => u.Keys.ToString() == tableItemStr && (u.Values == null || GetInt(u.Values.ToString()) <= GetInt(val.Value.ToString())));
@@ -238,14 +244,12 @@ namespace MaterialEvaluationCal.Calculates
                 switch (checkItemstr)
                 {
                     case "SCL":
-                        if(checkOK)
-                        {
-                            rowDate[""] = "";
-                        }
+                        rowDate["HG_SC" + baseNum] = checkOK ? "1" : "0";
                         break;
                     case "":
                         break;
                 }
+                baseNum++;
             }
 
 
